@@ -1,16 +1,20 @@
-# For this reason, we will by default run shellcheck during build time
-# instead of evaluation time.
-{ shellcheck, runCommandNoCCLocal
-, writeShellScript
+{ shellcheck
 , writeText
 , lib
+# Disable SC2154 by default: referenced but not assigned variables. We
+# want to be able to run this on small snippets of strings rather than
+# the whole script that we don't necessarily have control over.
+, disabledChecks ? [ "SC2154" ]
+, shellType ? "bash"
 }:
 
 let
-  # Disable SC2154: referenced but not assigned variables. We want to be
-  # able to run this on small snippets of strings rather than the whole
-  # script that we don't necessarily have control over.
-  check = pathStr: "${shellcheck}/bin/shellcheck -s bash -e SC2154 ${pathStr}";
+  disabledArgs = builtins.map (checkName: "-e ${checkName}") disabledChecks;
+  check = pathStr: lib.concatStringsSep " " (
+    [ "${shellcheck}/bin/shellcheck" "-s ${shellType}" ]
+    ++ disabledArgs
+    ++ [ pathStr ]
+  );
 in
 { # Takes a collection of attributes and a derivation. Returns a
   # derivation that has one extra phase at the beginning: one that
